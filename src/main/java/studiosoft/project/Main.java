@@ -94,8 +94,6 @@ public class Main {
      * @param height normally 1. same as bove
      */
     public static void drawSpriteQuad(Sprite sprite, float x, float y, float width, float height) {
-        sprite.bind();
-
         float h = height * sprite.getSizeY();
         float w = width * sprite.getSizeX();
 
@@ -179,9 +177,14 @@ public class Main {
             System.err.println("Failed to load Frog Texture");
             throw new RuntimeException(e);
         }
+        testAtlas.bind();
 
         // Set the clear color to a dark gray
         glClearColor(0.1f, 0.3f, 0.1f, 0.0f);
+
+        // create test sprites
+        Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
+        Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
 
         while (!glfwWindowShouldClose(window)) {
             // --- RENDER LOGIC STARTS HERE ---
@@ -196,11 +199,8 @@ public class Main {
             drawTile(frogTex, 10, 15);
             drawTile(frogTex, GRID_COLS - 1, GRID_ROWS - 1); // Bottom-right corner
 
-            // create test sprite
-            Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
+            // draw test sprites
             drawSpriteQuad(testSprite, 120, 80, 4, 4);
-
-            Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
             drawSpriteQuad(testSprite2, 120, 144, 4, 4);
 
             // --- RENDER LOGIC ENDS HERE ---

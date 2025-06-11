@@ -12,22 +12,19 @@ public class Sprite {
     private int tileSpanY;
 
     public Sprite(Texture srcTex, int tileU, int tileV, int tileSpanX, int tileSpanY) {
-        float tileSizeFrac = (float) srcTex.getTileSize() / srcTex.getHeight();
+        float tileSizeFracY = (float) srcTex.getTileSize() / srcTex.getHeight();
+        float tileSizeFracX = (float) srcTex.getTileSize() / srcTex.getWidth();
 
         this.textureAtlas = srcTex;
 
-        this.texU1 = tileU * tileSizeFrac;
-        this.texV1 = tileV * tileSizeFrac;
+        this.texU1 = tileU * tileSizeFracX;
+        this.texV1 = tileV * tileSizeFracY;
 
-        this.texU2 = texU1 + (tileSpanX  * tileSizeFrac);
-        this.texV2 = texV1 + (tileSpanY * tileSizeFrac);
+        this.texU2 = texU1 + (tileSpanX  * tileSizeFracX);
+        this.texV2 = texV1 + (tileSpanY * tileSizeFracY);
 
         this.sizeX = tileSpanX * srcTex.getTileSize();
         this.sizeY = tileSpanY * srcTex.getTileSize();
-    }
-
-    public void bind(){
-        textureAtlas.bind();
     }
 
     public float getU1(){
