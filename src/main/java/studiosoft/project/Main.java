@@ -180,7 +180,7 @@ public class Main {
         testAtlas.bind();
 
         // Set the clear color to a dark gray
-        glClearColor(0.1f, 0.3f, 0.1f, 0.0f);
+        glClearColor(0.1f, 0.2f, 0.1f, 0.0f);
 
         // create test sprites
         Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
