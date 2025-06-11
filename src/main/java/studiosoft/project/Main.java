@@ -177,7 +177,7 @@ public class Main {
             System.err.println("Failed to load Frog Texture");
             throw new RuntimeException(e);
         }
-        testAtlas.bind();
+
 
         // Set the clear color to a dark gray
         glClearColor(0.1f, 0.2f, 0.1f, 0.0f);
@@ -198,6 +198,8 @@ public class Main {
             drawTile(frogTex, 8, 3);
             drawTile(frogTex, 10, 15);
             drawTile(frogTex, GRID_COLS - 1, GRID_ROWS - 1); // Bottom-right corner
+
+            testAtlas.bind();
 
             // draw test sprites
             drawSpriteQuad(testSprite, 120, 80, 4, 4);
