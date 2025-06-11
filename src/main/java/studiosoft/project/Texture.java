@@ -16,10 +16,12 @@ public class Texture {
     public final int id;
     public final int target = GL_TEXTURE_2D;
     // NEW: Store width and height for potential future use
-    public final int width;
-    public final int height;
+    private final int width;
+    private final int height;
+    private final int tileSize;
 
-    public Texture(URL textureSource) throws IOException {
+    public Texture(URL textureSource, int tileSize) throws IOException {
+        this.tileSize = tileSize;
         try (InputStream input = textureSource.openStream()) {
             PNGDecoder decoder = new PNGDecoder(input);
             this.width = decoder.getWidth();
@@ -49,5 +51,17 @@ public class Texture {
 
     public void bind() {
         glBindTexture(target, id);
+    }
+
+    public int getTileSize(){
+        return tileSize;
+    }
+
+    public int getWidth(){
+        return width;
+    }
+
+    public int getHeight(){
+        return height;
     }
 }

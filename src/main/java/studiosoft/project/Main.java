@@ -85,6 +85,29 @@ public class Main {
         glfwShowWindow(window);
     }
 
+    /**
+     *
+     * @param sprite selected sprite to draw
+     * @param x x coord (screen) to draw on ... replace with grid coord ?
+     * @param y y coord (screen) to draw on ... replace with grid coord ?
+     * @param width normally 1. this is to keep consistent pixel size, but can be broken for special effects if desired.
+     * @param height normally 1. same as bove
+     */
+    public static void drawSpriteQuad(Sprite sprite, float x, float y, float width, float height) {
+        sprite.bind();
+
+        float h = height * sprite.getSizeY();
+        float w = width * sprite.getSizeX();
+
+        glBegin(GL_QUADS);
+            glTexCoord2f(sprite.getU1(), sprite.getV1()); glVertex2f(x, y);
+            glTexCoord2f(sprite.getU1(), sprite.getV2()); glVertex2f(x, y + h);
+            glTexCoord2f(sprite.getU2(), sprite.getV2()); glVertex2f(x + w, y + h);
+            glTexCoord2f(sprite.getU2(), sprite.getV1()); glVertex2f(x + w, y);
+        glEnd();
+
+    }
+
     // NEW: A dedicated function to draw a textured quad at specific pixel coordinates.
     // This is what your 'debugTexture' function has been refactored into.
     public static void drawQuad(Texture tex, float x, float y, float width, float height) {
@@ -137,14 +160,28 @@ public class Main {
             if (frogURL == null) {
                 throw new IOException("Resource not found: textures/frog.png");
             }
-            frogTex = new Texture(frogURL);
+            frogTex = new Texture(frogURL, 32);
+        } catch (IOException e) {
+            System.err.println("Failed to load Frog Texture");
+            throw new RuntimeException(e);
+        }
+
+        // load test atlas
+        Texture testAtlas = null;
+        try {
+            // Make sure "textures/frog.png" is in your resources folder.
+            URL testAtlasURL = Main.class.getClassLoader().getResource("textures/atlas.png");
+            if (testAtlasURL == null) {
+                throw new IOException("Resource not found: textures/frog.png");
+            }
+            testAtlas = new Texture(testAtlasURL, 16);
         } catch (IOException e) {
             System.err.println("Failed to load Frog Texture");
             throw new RuntimeException(e);
         }
 
         // Set the clear color to a dark gray
-        glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
+        glClearColor(0.1f, 0.3f, 0.1f, 0.0f);
 
         while (!glfwWindowShouldClose(window)) {
             // --- RENDER LOGIC STARTS HERE ---
@@ -155,10 +192,16 @@ public class Main {
             // 2. Draw everything for the current frame
             // Let's draw a few frogs at different grid positions to test.
             drawTile(frogTex, 0, 0); // Top-left corner
-            drawTile(frogTex, 5, 3);
+            drawTile(frogTex, 8, 3);
             drawTile(frogTex, 10, 15);
             drawTile(frogTex, GRID_COLS - 1, GRID_ROWS - 1); // Bottom-right corner
 
+            // create test sprite
+            Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
+            drawSpriteQuad(testSprite, 120, 80, 4, 4);
+
+            Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
+            drawSpriteQuad(testSprite2, 120, 144, 4, 4);
 
             // --- RENDER LOGIC ENDS HERE ---
 
