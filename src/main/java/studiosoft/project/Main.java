@@ -198,8 +198,9 @@ public class Main {
         // create test sprites
         Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
         Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
+        Sprite playerSprite = new Sprite(testAtlas, 2, 1, 1, 1);
 
-        Player player = new Player(testSprite, 250f, 250f);
+        Player player = new Player(playerSprite, 250f, 250f, 2f, 2f);
 
         while (!glfwWindowShouldClose(window)) {
 

@@ -35,6 +35,14 @@ public class Actor {
         this.zLayer = zLayer;
     }
 
+    public Actor(Sprite spr, float posX, float posY, float widthSF, float heightSF){
+        this.sprite = spr;
+        this.posX = posX;
+        this.posY = posY;
+        this.widthSF = widthSF;
+        this.heightSF = heightSF;
+    }
+
     public Actor(Sprite spr, float posX, float posY){
         this.sprite = spr;
         this.posX = posX;

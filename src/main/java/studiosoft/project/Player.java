@@ -12,6 +12,10 @@ public class Player extends Actor{
         super(spr, posX, posY);
     }
 
+    public Player(Sprite spr, float posX, float posY, float wsf, float hsf) {
+        super(spr, posX, posY, wsf, hsf);
+    }
+
     public Player(Sprite spr, float posX, float posY, int zLayer) {
         super(spr, posX, posY, zLayer);
     }
