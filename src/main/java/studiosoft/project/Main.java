@@ -106,6 +106,19 @@ public class Main {
 
     }
 
+    public static void drawActorQuad(Actor actor, float x, float y) {
+        float h = actor.getHeightSF() * actor.getSprite().getSizeY();
+        float w = actor.getWidthSF() * actor.getSprite().getSizeX();
+
+        glBegin(GL_QUADS);
+        glTexCoord2f(actor.getSprite().getU1(), actor.getSprite().getV1()); glVertex2f(x, y);
+        glTexCoord2f(actor.getSprite().getU1(), actor.getSprite().getV2()); glVertex2f(x, y + h);
+        glTexCoord2f(actor.getSprite().getU2(), actor.getSprite().getV2()); glVertex2f(x + w, y + h);
+        glTexCoord2f(actor.getSprite().getU2(), actor.getSprite().getV1()); glVertex2f(x + w, y);
+        glEnd();
+
+    }
+
     // NEW: A dedicated function to draw a textured quad at specific pixel coordinates.
     // This is what your 'debugTexture' function has been refactored into.
     public static void drawQuad(Texture tex, float x, float y, float width, float height) {
@@ -186,7 +199,27 @@ public class Main {
         Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
         Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
 
+        Player player = new Player(testSprite, 250f, 250f);
+
         while (!glfwWindowShouldClose(window)) {
+
+            // --- INPUT LOGIC STARTS HERE ---
+
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                player.moveY(false);
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                player.moveY(true);
+            }
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                player.moveX(false);
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                player.moveX(true);
+            }
+
+            // --- INPUT LOGIC ENDS HERE ---
+
             // --- RENDER LOGIC STARTS HERE ---
 
             // 1. Clear the screen
@@ -204,6 +237,9 @@ public class Main {
             // draw test sprites
             drawSpriteQuad(testSprite, 120, 80, 4, 4);
             drawSpriteQuad(testSprite2, 120, 144, 4, 4);
+
+            //draw player
+            drawActorQuad(player, player.getPosX(), player.getPosY());
 
             // --- RENDER LOGIC ENDS HERE ---
 
