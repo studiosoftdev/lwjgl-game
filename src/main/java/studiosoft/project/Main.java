@@ -4,6 +4,11 @@ import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
+import studiosoft.project.components.PlayerInput;
+import studiosoft.project.components.Position;
+import studiosoft.project.components.Renderable;
+import studiosoft.project.systems.PlayerInputSystem;
+import studiosoft.project.systems.RenderSystem;
 
 import java.io.IOException;
 import java.net.URL;
@@ -32,6 +37,9 @@ public class Main {
     // The final window size is derived from our grid dimensions
     private static final int WINDOW_WIDTH = GRID_COLS * TILE_WIDTH;   // 800
     private static final int WINDOW_HEIGHT = GRID_ROWS * TILE_HEIGHT; // 640
+
+    // used for precise framerate calcs eg proper move speed;
+    private double deltaTime = 0;
 
 
     public void run() {
@@ -162,6 +170,9 @@ public class Main {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        // for deltaTime calc
+        double lastFrameTime = glfwGetTime();
+
 
         // Load the texture
         Texture frogTex = null;
@@ -200,24 +211,40 @@ public class Main {
         Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
         Sprite playerSprite = new Sprite(testAtlas, 2, 1, 1, 1);
 
-        Player player = new Player(playerSprite, 250f, 250f, 2f, 2f);
+        //Player player = new Player(playerSprite, 250f, 250f, 2f, 2f);
+
+
+        /// TESTING NEW ECS SETUPS
+        World world = new World();
+        Camera camera = new Camera(0f, 0f, 2f);
+
+        // Systems
+        RenderSystem renderSystem = new RenderSystem(world, camera, WINDOW_WIDTH, WINDOW_HEIGHT);
+        PlayerInputSystem playerInputSystem = new PlayerInputSystem(world, window);
+
+        // Initial entities
+        Entity player = world.createEntity();
+        player.addComponent(new Position(0, 0));
+        player.addComponent(new PlayerInput(100f));
+        player.addComponent(new Renderable(playerSprite));
+
+        Entity testE1 = world.createEntity();
+        testE1.addComponent(new Position(48, 64));
+        testE1.addComponent(new Renderable(testSprite));
+
+        Entity testE2 = world.createEntity();
+        testE2.addComponent(new Position(64, 48));
+        testE2.addComponent(new Renderable(testSprite2));
+
 
         while (!glfwWindowShouldClose(window)) {
 
+            // get start time for deltaTime
+            double loopStartTime = glfwGetTime();
+
             // --- INPUT LOGIC STARTS HERE ---
 
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-                player.moveY(false);
-            }
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-                player.moveY(true);
-            }
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                player.moveX(false);
-            }
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                player.moveX(true);
-            }
+
 
             // --- INPUT LOGIC ENDS HERE ---
 
@@ -226,21 +253,15 @@ public class Main {
             // 1. Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // 2. Draw everything for the current frame
-            // Let's draw a few frogs at different grid positions to test.
-            drawTile(frogTex, 0, 0); // Top-left corner
-            drawTile(frogTex, 8, 3);
-            drawTile(frogTex, 10, 15);
-            drawTile(frogTex, GRID_COLS - 1, GRID_ROWS - 1); // Bottom-right corner
+            // 2. Update core systems (movement etc)
+            playerInputSystem.update((float) deltaTime);
 
+            // 2. Draw world tiles for current frame
+
+            // 3. Draw entities for current frame
             testAtlas.bind();
+            renderSystem.update();
 
-            // draw test sprites
-            drawSpriteQuad(testSprite, 120, 80, 4, 4);
-            drawSpriteQuad(testSprite2, 120, 144, 4, 4);
-
-            //draw player
-            drawActorQuad(player, player.getPosX(), player.getPosY());
 
             // --- RENDER LOGIC ENDS HERE ---
 
@@ -250,6 +271,11 @@ public class Main {
 
             // 4. Poll for events (like closing the window)
             glfwPollEvents();
+
+            //calc deltaTime
+            double loopEndTime = glfwGetTime();
+            deltaTime = loopEndTime - loopStartTime;
+            //System.out.println(1/deltaTime);
         }
     }
 
