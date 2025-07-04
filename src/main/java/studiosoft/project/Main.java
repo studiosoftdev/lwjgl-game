@@ -4,11 +4,10 @@ import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.*;
-import studiosoft.project.components.PlayerInput;
-import studiosoft.project.components.Position;
-import studiosoft.project.components.Renderable;
+import studiosoft.project.components.*;
 import studiosoft.project.systems.PlayerInputSystem;
 import studiosoft.project.systems.RenderSystem;
+import studiosoft.project.systems.TilemapRenderSystem;
 
 import java.io.IOException;
 import java.net.URL;
@@ -63,6 +62,15 @@ public class Main {
             throw new IllegalStateException("Unable to initialize GLFW");
 
         glfwDefaultWindowHints();
+
+        // We want to use a modern OpenGL version, 3.3 is a good choice
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        // We want to use the modern "core" profile, not the old "compatibility" one
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        // This is required for macOS, but good practice for all systems
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // CHANGED: Let's make it non-resizable for a fixed grid
 
@@ -89,6 +97,7 @@ public class Main {
         }
 
         glfwMakeContextCurrent(window);
+        GL.createCapabilities();
         glfwSwapInterval(1); // Enable v-sync
         glfwShowWindow(window);
     }
@@ -153,8 +162,6 @@ public class Main {
 
 
     private void loop() {
-        GL.createCapabilities();
-
         // NEW: Set up the projection matrix once.
         // This defines our 2D coordinate system.
         glMatrixMode(GL_PROJECTION);
@@ -222,6 +229,9 @@ public class Main {
         RenderSystem renderSystem = new RenderSystem(world, camera, WINDOW_WIDTH, WINDOW_HEIGHT);
         PlayerInputSystem playerInputSystem = new PlayerInputSystem(world, window);
 
+        System.out.println("Context at start of loop(): " + org.lwjgl.glfw.GLFW.glfwGetCurrentContext());
+        TilemapRenderSystem tilemapRenderSystem = new TilemapRenderSystem(world, testAtlas);
+
         // Initial entities
         Entity player = world.createEntity();
         player.addComponent(new Position(0, 0));
@@ -235,6 +245,10 @@ public class Main {
         Entity testE2 = world.createEntity();
         testE2.addComponent(new Position(64, 48));
         testE2.addComponent(new Renderable(testSprite2));
+
+        Entity testLevelE = world.createEntity();
+        testLevelE.addComponent(new TilemapRenderable(0));
+        testLevelE.addComponent(new LevelRenderData());
 
 
         while (!glfwWindowShouldClose(window)) {
@@ -256,11 +270,13 @@ public class Main {
             // 2. Update core systems (movement etc)
             playerInputSystem.update((float) deltaTime);
 
+
             // 2. Draw world tiles for current frame
+            tilemapRenderSystem.update((float) deltaTime);
 
             // 3. Draw entities for current frame
             testAtlas.bind();
-            renderSystem.update();
+            renderSystem.update((float) deltaTime);
 
 
             // --- RENDER LOGIC ENDS HERE ---

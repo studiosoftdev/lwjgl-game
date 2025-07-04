@@ -61,4 +61,8 @@ public class World {
         matchingEntities.addAll(entityCandidates);
         return matchingEntities;
     }
+
+    public <T> void removeComponent(int entityID, Class<T> componentType){
+        /// TODO: implement this
+    }
 }

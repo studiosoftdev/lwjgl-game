@@ -12,7 +12,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.glfwGetKey;
 
-public class PlayerInputSystem {
+public class PlayerInputSystem implements ECSSystem {
     // The system knows about the world so it can query for data.
     private World world;
     private long window;
@@ -20,6 +20,10 @@ public class PlayerInputSystem {
     public PlayerInputSystem(World world, long window) {
         this.world = world;
         this.window = window;
+    }
+
+    public void update(){
+        return;
     }
 
     public void update(float deltaTime) {

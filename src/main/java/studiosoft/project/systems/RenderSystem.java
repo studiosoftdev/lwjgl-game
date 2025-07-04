@@ -12,7 +12,7 @@ import static org.lwjgl.opengl.GL11.glEnd;
 import static org.lwjgl.opengl.GL11.glTexCoord2f;
 import static org.lwjgl.opengl.GL11.glVertex2f;
 
-public class RenderSystem {
+public class RenderSystem implements ECSSystem {
     private World world;
     private Camera camera;
     private final int windowWidth;
@@ -29,7 +29,8 @@ public class RenderSystem {
         return new Sprite(srcTex, tileU, tileV, tileSpanX, tileSpanY);
     }
 
-    public void update(){
+    @Override
+    public void update(float deltaTime){
 
         List<Integer> entitiesToRender = world.queryEntitiesWith(Renderable.class, Position.class);
         for(Integer entityID : entitiesToRender){
