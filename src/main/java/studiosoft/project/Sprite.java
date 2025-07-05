@@ -1,5 +1,7 @@
 package studiosoft.project;
 
+import org.joml.Vector4f;
+
 public class Sprite {
     private Texture textureAtlas;
 
@@ -48,5 +50,18 @@ public class Sprite {
     }
     public int getSizeY() {
         return sizeY;
+    }
+
+    public Texture getTextureAtlas() {
+        return textureAtlas;
+    }
+
+    public Vector4f getUVsAsVector() {
+        // Assuming getU1, getV1 etc. give you the corners of the sprite on the atlas
+        float u_start = texU1;
+        float v_start = texV1;
+        float u_width = texU2 - texU1;
+        float v_height = texV2 - texV1;
+        return new Vector4f(u_start, v_start, u_width, v_height);
     }
 }

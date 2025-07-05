@@ -66,11 +66,15 @@ public class Texture {
     }
 
     public float[] getTileUVs(int tileID){
-        float u0 = ((tileID * tileSize) % width);
-        float u1 = u0 + tileSize;
-        float v0 = ((tileID * tileSize) / (float) height);
-        float v1 = v0 + tileSize;
+        int tilesPerRow = width / tileSize;
+        int xInd = tileID % tilesPerRow;
+        int yInd = tileID / tilesPerRow;
 
-        return new float[]{u0, v1, u1, v1};
+        float u0 = (float)(xInd * tileSize) / width;
+        float v0 = (float)(yInd * tileSize) / height;
+        float u1 = (float)((xInd+1) * tileSize) / width;
+        float v1 = (float)((yInd+1) * tileSize) / height;
+
+        return new float[]{u0, v1, u1, v1, u1, v0, u0, v0};
     }
 }

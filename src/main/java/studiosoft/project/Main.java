@@ -1,5 +1,6 @@
 package studiosoft.project;
 
+import org.joml.Matrix4f;
 import org.lwjgl.*;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
@@ -98,84 +99,38 @@ public class Main {
 
         glfwMakeContextCurrent(window);
         GL.createCapabilities();
+        GLUtil.setupDebugMessageCallback(System.err);
         glfwSwapInterval(1); // Enable v-sync
         glfwShowWindow(window);
     }
 
-    /**
-     *
-     * @param sprite selected sprite to draw
-     * @param x x coord (screen) to draw on ... replace with grid coord ?
-     * @param y y coord (screen) to draw on ... replace with grid coord ?
-     * @param width normally 1. this is to keep consistent pixel size, but can be broken for special effects if desired.
-     * @param height normally 1. same as bove
-     */
-    public static void drawSpriteQuad(Sprite sprite, float x, float y, float width, float height) {
-        float h = height * sprite.getSizeY();
-        float w = width * sprite.getSizeX();
-
-        glBegin(GL_QUADS);
-            glTexCoord2f(sprite.getU1(), sprite.getV1()); glVertex2f(x, y);
-            glTexCoord2f(sprite.getU1(), sprite.getV2()); glVertex2f(x, y + h);
-            glTexCoord2f(sprite.getU2(), sprite.getV2()); glVertex2f(x + w, y + h);
-            glTexCoord2f(sprite.getU2(), sprite.getV1()); glVertex2f(x + w, y);
-        glEnd();
-
-    }
-
-    public static void drawActorQuad(Actor actor, float x, float y) {
-        float h = actor.getHeightSF() * actor.getSprite().getSizeY();
-        float w = actor.getWidthSF() * actor.getSprite().getSizeX();
-
-        glBegin(GL_QUADS);
-        glTexCoord2f(actor.getSprite().getU1(), actor.getSprite().getV1()); glVertex2f(x, y);
-        glTexCoord2f(actor.getSprite().getU1(), actor.getSprite().getV2()); glVertex2f(x, y + h);
-        glTexCoord2f(actor.getSprite().getU2(), actor.getSprite().getV2()); glVertex2f(x + w, y + h);
-        glTexCoord2f(actor.getSprite().getU2(), actor.getSprite().getV1()); glVertex2f(x + w, y);
-        glEnd();
-
-    }
-
-    // NEW: A dedicated function to draw a textured quad at specific pixel coordinates.
-    // This is what your 'debugTexture' function has been refactored into.
-    public static void drawQuad(Texture tex, float x, float y, float width, float height) {
-        // Bind the texture before rendering it
-        tex.bind();
-
-        // Immediate mode is deprecated, but fine for this simple example.
-        // We assume the projection is already set up for the frame.
-        glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex2f(x, y);
-        glTexCoord2f(0, 1); glVertex2f(x, y + height);
-        glTexCoord2f(1, 1); glVertex2f(x + width, y + height);
-        glTexCoord2f(1, 0); glVertex2f(x + width, y);
-        glEnd();
-    }
-
-    // NEW: A helper function to draw a texture on our grid.
-    // It translates grid coordinates (e.g., 5, 3) to pixel coordinates.
-    public static void drawTile(Texture tex, int gridX, int gridY) {
-        float pixelX = gridX * TILE_WIDTH;
-        float pixelY = gridY * TILE_HEIGHT;
-        drawQuad(tex, pixelX, pixelY, TILE_WIDTH, TILE_HEIGHT);
-    }
-
 
     private void loop() {
-        // NEW: Set up the projection matrix once.
-        // This defines our 2D coordinate system.
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        // The coordinate system will go from (0,0) at the top-left corner
-        // to (WINDOW_WIDTH, WINDOW_HEIGHT) at the bottom-right.
-        glOrtho(0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, 1, -1);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
         // NEW: Enable 2D texturing and alpha blending.
         glEnable(GL_TEXTURE_2D);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        // create projection matrix that does same thing as previous glOrtho
+        Matrix4f projectionMatrix = new Matrix4f().ortho(0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, 1, -1);
+
+        // shader setup
+        ShaderProgram shaderProgram;
+        try{
+            String vertexSource = loadResource("/shaders/tilemap.vert");
+            String fragmentSource = loadResource("/shaders/tilemap.frag");
+            shaderProgram = new ShaderProgram(vertexSource, fragmentSource);
+            // create uniforms for the proj matrix and tex sampler
+            shaderProgram.createUniform("projection");
+            shaderProgram.createUniform("view");
+            shaderProgram.createUniform("model");
+            shaderProgram.createUniform("texture_sampler");
+            shaderProgram.createUniform("spriteUVs");
+            shaderProgram.createUniform("useUVRemapping");
+        } catch (Exception e){
+            e.printStackTrace();
+            return;
+        }
 
         // for deltaTime calc
         double lastFrameTime = glfwGetTime();
@@ -199,13 +154,13 @@ public class Main {
         Texture testAtlas = null;
         try {
             // Make sure "textures/frog.png" is in your resources folder.
-            URL testAtlasURL = Main.class.getClassLoader().getResource("textures/atlas.png");
+            URL testAtlasURL = Main.class.getClassLoader().getResource("textures/bgatlas.png");
             if (testAtlasURL == null) {
-                throw new IOException("Resource not found: textures/frog.png");
+                throw new IOException("Resource not found: textures/bgatlas.png");
             }
             testAtlas = new Texture(testAtlasURL, 16);
         } catch (IOException e) {
-            System.err.println("Failed to load Frog Texture");
+            System.err.println("Failed to load bgatlas Texture");
             throw new RuntimeException(e);
         }
 
@@ -214,9 +169,9 @@ public class Main {
         glClearColor(0.1f, 0.2f, 0.1f, 0.0f);
 
         // create test sprites
-        Sprite testSprite = new Sprite(testAtlas, 0, 0, 1, 1);
-        Sprite testSprite2 = new Sprite(testAtlas, 1, 0, 1, 1);
-        Sprite playerSprite = new Sprite(testAtlas, 2, 1, 1, 1);
+        Sprite testSprite = new Sprite(frogTex, 0, 0, 1, 1);
+        Sprite testSprite2 = new Sprite(frogTex, 1, 0, 1, 1);
+        Sprite playerSprite = new Sprite(frogTex, 0, 1, 1, 1);
 
         //Player player = new Player(playerSprite, 250f, 250f, 2f, 2f);
 
@@ -226,11 +181,11 @@ public class Main {
         Camera camera = new Camera(0f, 0f, 2f);
 
         // Systems
-        RenderSystem renderSystem = new RenderSystem(world, camera, WINDOW_WIDTH, WINDOW_HEIGHT);
+        RenderSystem renderSystem = new RenderSystem(world, camera, WINDOW_WIDTH, WINDOW_HEIGHT, shaderProgram);
         PlayerInputSystem playerInputSystem = new PlayerInputSystem(world, window);
 
         System.out.println("Context at start of loop(): " + org.lwjgl.glfw.GLFW.glfwGetCurrentContext());
-        TilemapRenderSystem tilemapRenderSystem = new TilemapRenderSystem(world, testAtlas);
+        TilemapRenderSystem tilemapRenderSystem = new TilemapRenderSystem(world, testAtlas, shaderProgram, camera);
 
         // Initial entities
         Entity player = world.createEntity();
@@ -258,8 +213,6 @@ public class Main {
 
             // --- INPUT LOGIC STARTS HERE ---
 
-
-
             // --- INPUT LOGIC ENDS HERE ---
 
             // --- RENDER LOGIC STARTS HERE ---
@@ -267,32 +220,48 @@ public class Main {
             // 1. Clear the screen
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            // 2. Update core systems (movement etc)
+            // 2. bind shader and set uniforms
+            shaderProgram.bind();
+            shaderProgram.setUniform("projection", projectionMatrix);
+            shaderProgram.setUniform("view", camera.getViewMatrix());
+            shaderProgram.setUniform("texture_sampler", 0); //use tex unit 0
+
+            // 3. Update core systems (movement etc)
             playerInputSystem.update((float) deltaTime);
 
 
-            // 2. Draw world tiles for current frame
+            // 4. Draw world tiles for current frame
             tilemapRenderSystem.update((float) deltaTime);
 
-            // 3. Draw entities for current frame
-            testAtlas.bind();
+            // 5. Draw entities for current frame
+            //testAtlas.bind();
             renderSystem.update((float) deltaTime);
 
+            // 6. unbind shader
+            shaderProgram.unbind();
 
             // --- RENDER LOGIC ENDS HERE ---
 
-
-            // 3. Swap the buffers to display what we've drawn
+            // 7. Swap the buffers to display what we've drawn
             glfwSwapBuffers(window);
 
-            // 4. Poll for events (like closing the window)
+            // 8. Poll for events (like closing the window)
             glfwPollEvents();
 
-            //calc deltaTime
+            // 9. calc deltaTime
             double loopEndTime = glfwGetTime();
             deltaTime = loopEndTime - loopStartTime;
             //System.out.println(1/deltaTime);
         }
+    }
+
+    public static String loadResource(String fileName) throws Exception {
+        String result;
+        try (var in = Main.class.getResourceAsStream(fileName);
+             var scanner = new java.util.Scanner(in, java.nio.charset.StandardCharsets.UTF_8)) {
+            result = scanner.useDelimiter("\\A").next();
+        }
+        return result;
     }
 
     public static void main(String[] args) {

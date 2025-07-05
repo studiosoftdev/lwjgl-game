@@ -22,16 +22,7 @@ public class PlayerInputSystem implements ECSSystem {
         this.window = window;
     }
 
-    public void update(){
-        return;
-    }
-
     public void update(float deltaTime) {
-        // 1. The System queries the World for all components of a certain type.
-        //    (A more advanced system would query for entities with a COMBINATION of components).
-        Collection<Position> positions = world.getComponents(Position.class);
-        Collection<PlayerInput> playerInputs = world.getComponents(PlayerInput.class);
-
         List<Integer> entitiesPlayers = world.queryEntitiesWith(PlayerInput.class, Position.class);
 
         for(Integer entityID : entitiesPlayers){
@@ -49,29 +40,6 @@ public class PlayerInputSystem implements ECSSystem {
             }
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
                 pos.x += playerInput.moveSpeed * deltaTime;
-            }
-        }
-
-        // This is a simplified check. We assume if a player input component exists,
-        // the corresponding position component is the one we want to modify.
-        if (!playerInputs.isEmpty() && !positions.isEmpty()) {
-
-            // 2. The System iterates through the data and applies its logic.
-            for (Position pos : positions) {
-                // Fake input for demonstration
-                // In a real game, this would check glfwGetKey()
-                if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-                    pos.y += 1 * deltaTime;
-                }
-                if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-                    pos.y -= 1 * deltaTime;
-                }
-                if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                    pos.x += 1 * deltaTime;
-                }
-                if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                    pos.x -= 1 * deltaTime;
-                }
             }
         }
     }

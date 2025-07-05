@@ -1,6 +1,10 @@
 package studiosoft.project.systems;
 
+import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
+import org.lwjgl.system.MemoryStack;
+import studiosoft.project.Camera;
+import studiosoft.project.ShaderProgram;
 import studiosoft.project.Texture;
 import studiosoft.project.World;
 import studiosoft.project.components.LevelRenderData;
@@ -14,10 +18,14 @@ import static org.lwjgl.opengl.GL30.*;
 public class TilemapRenderSystem implements ECSSystem{
     private World world;
     private Texture textureAtlas;
+    private ShaderProgram shaderProgram;
+    private Camera camera;
 
-    public TilemapRenderSystem(World world, Texture textureAtlas) {
+    public TilemapRenderSystem(World world, Texture textureAtlas, ShaderProgram shaderProgram, Camera camera) {
         this.world = world;
         this.textureAtlas = textureAtlas;
+        this.shaderProgram = shaderProgram;
+        this.camera = camera;
     }
 
     @Override
@@ -26,6 +34,9 @@ public class TilemapRenderSystem implements ECSSystem{
         //System.out.println("Context in TilemapRenderSystem: " + org.lwjgl.glfw.GLFW.glfwGetCurrentContext()); // ADD THIS LINE
         // get all tilemap entities
         List<Integer> tilemapEntities = world.queryEntitiesWith(TilemapRenderable.class);
+
+        //set camera view matrix to view uniform here somehow
+        shaderProgram.setUniform("view", camera.getViewMatrix());
 
         for(Integer entID : tilemapEntities){
             // get data for the tilemap
@@ -46,13 +57,12 @@ public class TilemapRenderSystem implements ECSSystem{
             }
 
             // render the tilemap
-            renderTilemap(renderData, textureAtlas.id);
+            renderTilemap(renderData);
         }
     }
 
     private void buildTilemapVBO(TilemapRenderable tilemap, LevelRenderData renderData) {
-        System.out.println("bTVBO");
-        // each tile is a quad (2 tri, 4 vert)
+        /*// each tile is a quad (2 tri, 4 vert)
         // each vert needs (x,y) and (u,v) for pos and tex coords
         // 4 floats per vert => 16 floats per quad
         int numTiles = tilemap.tilemapWidth * tilemap.tilemapHeight;
@@ -105,7 +115,7 @@ public class TilemapRenderSystem implements ECSSystem{
 
         // configure vertex attributes
         // position attr (layout 0 in shader)
-        glVertexAttribPointer(0, 2, GL_FLOAT, false, (2+2) * Float.BYTES, 0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, (2+2), 0);
         glEnableVertexAttribArray(0);
 
         // texture coord attr (layout 1)
@@ -118,32 +128,108 @@ public class TilemapRenderSystem implements ECSSystem{
         glBindVertexArray(0);
 
         // store vertex count for drawing
-        renderData.vertexCount = numTiles * 4; //4 vert per quad
-    }
+        renderData.vertexCount = numTiles * 4; //4 vert per quad*/
 
-    private void renderTilemap(LevelRenderData renderData, int textureID){
-        System.out.println("rT");
-        // bind texture
-        glActiveTexture(GL_TEXTURE0); //activate texture unit 0
-        glBindTexture(GL_TEXTURE_2D, textureID);
+        /// triangle
+        int numTiles = tilemap.tilemapWidth * tilemap.tilemapHeight;
+        // Each tile is a quad, which we'll make from two triangles (6 vertices).
+        // Each vertex has position (2 floats) and UVs (2 floats).
+        FloatBuffer vertexBuffer = BufferUtils.createFloatBuffer(numTiles * 6 * 4);
 
-        // bind VAO
+        for (int y = 0; y < tilemap.tilemapHeight; y++) {
+            for (int x = 0; x < tilemap.tilemapWidth; x++) {
+                int tileID = tilemap.tileMap[y][x];
+                if (tileID == -1) continue; // Optional: skip empty tiles
+
+                float[] uvs = textureAtlas.getTileUVs(tileID);
+                float xPos = (float) x * tilemap.tileWidth;
+                float yPos = (float) y * tilemap.tileHeight;
+
+                // Vertex data for a quad, ordered for two triangles
+                // Triangle 1: Top-left, Bottom-left, Bottom-right
+                // Triangle 2: Bottom-right, Top-right, Top-left
+                float[] verts = {
+                        // Position      // UVs
+                        xPos, yPos,                           uvs[6], uvs[7], // Top-left
+                        xPos, yPos + tilemap.tileHeight,      uvs[0], uvs[1], // Bottom-left
+                        xPos + tilemap.tileWidth, yPos + tilemap.tileHeight, uvs[2], uvs[3], // Bottom-right
+
+                        xPos + tilemap.tileWidth, yPos + tilemap.tileHeight, uvs[2], uvs[3], // Bottom-right
+                        xPos + tilemap.tileWidth, yPos,       uvs[4], uvs[5], // Top-right
+                        xPos, yPos,                           uvs[6], uvs[7]  // Top-left
+                };
+                vertexBuffer.put(verts);
+            }
+        }
+        vertexBuffer.flip();
+
+        // Generate and bind VAO
+        if (renderData.vaoID == 0) {
+            renderData.vaoID = glGenVertexArrays();
+        }
         glBindVertexArray(renderData.vaoID);
 
-        // enable vert attr arrays
-        glEnableVertexAttribArray(0); //position
-        glEnableVertexAttribArray(1); //tex UVs
+        // Generate and bind VBO
+        if (renderData.vboID == 0) {
+            renderData.vboID = glGenBuffers();
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, renderData.vboID);
+        glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STATIC_DRAW);
 
-        // draw quads -- investigate replacing with GL_TRIANGLES by using IBO/EBO for efficiency
-        glDrawArrays(GL_QUADS, 0, renderData.vertexCount);
+        // Configure vertex attributes
+        int stride = 4 * Float.BYTES;
+        // Position attribute (location = 0)
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, stride, 0);
+        glEnableVertexAttribArray(0);
 
-        // disable vert attr arrays
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(0);
+        // Texture coordinate attribute (location = 1)
+        glVertexAttribPointer(1, 2, GL_FLOAT, false, stride, 2 * Float.BYTES);
+        glEnableVertexAttribArray(1);
 
-        // unbind VAO and tex
+        // Unbind VAO to be safe
+        glBindVertexArray(0);
+
+        renderData.vertexCount = numTiles * 6;
+    }
+
+    private void renderTilemap(LevelRenderData renderData){
+        // The Model matrix is now an identity matrix because the vertex positions
+        // are already in world space. The camera's view matrix will handle positioning.
+        shaderProgram.setUniform("model", new Matrix4f()); // Set a neutral model matrix
+        shaderProgram.setUniform("useUVRemapping", false);
+
+        textureAtlas.bind();
+        glBindVertexArray(renderData.vaoID);
+
+        glDrawArrays(GL_TRIANGLES, 0, renderData.vertexCount);
+
+        // Unbind after drawing
         glBindVertexArray(0);
         glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    private void updateTexCoords(int vaoID, float[] uvs) {
+        // only uvs are being changed, which are at offset 2 floats in each vertex (8 bytes)
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            FloatBuffer uvBuffer = stack.mallocFloat(2);
+
+            // assuming vbo is still bound from setup - can rebind if needed
+            // calc offset where UVs start (2 floats into each vert)
+            for(int i = 0; i < 4; i++){
+                // each vert is 4 bytes, wanting to update floats 2 and 3 of each
+                long offsetBytes = (i * 4 + 2) * Float.BYTES;
+
+                uvBuffer.clear();
+                uvBuffer.put(uvs[i*2]);
+                uvBuffer.put(uvs[i*2 + 1]);
+                uvBuffer.flip();
+
+                //wrte u and v (2 floats) for this vert
+                glBufferSubData(GL_ARRAY_BUFFER, offsetBytes, uvBuffer);
+            }
+
+            glBindVertexArray(0);
+        }
     }
 
     // Dispose resources when game ends or level changes completely
@@ -158,26 +244,5 @@ public class TilemapRenderSystem implements ECSSystem{
             /// method does not yet have implementation
             world.removeComponent(entityID, LevelRenderData.class);
         }
-    }
-
-    /// test load level data, remove when real loading system done
-    public void testLoad(){
-        int[][] testLevel = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                {0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0},
-                {0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0},
-                {0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0},
-                {0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0},
-                {0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0},
-                {1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1},
-                {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-                {1,1,1,1,0,1,1,1,1,1,1,0,0,1,1,1},
-                {1,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0},
-                {1,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0},
-                {1,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0},
-                {1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0},
-                {1,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0},
-                {1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0}};
-
     }
 }
